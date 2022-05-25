@@ -7,6 +7,8 @@ import (
 
 type Config = viper.Viper
 
+var globalConfig *Config
+
 func Load(configFile string, configFiles ...string) *Config {
 	v := viper.New()
 	v.SetConfigName(configFile)
@@ -23,3 +25,14 @@ func Load(configFile string, configFiles ...string) *Config {
 	}
 	return v
 }
+
+func LoadGlobal(configFile string, configFiles ...string) *Config {
+	globalConfig = Load(configFile, configFiles...)
+	return globalConfig
+}
+
+func GetGlobal() *Config {
+	if globalConfig == nil { panic("Error: config.LoadGlobal require to call once") }
+	return globalConfig
+}
+
