@@ -6,15 +6,15 @@ import (
 	"net/mail"
 	"net/smtp"
 	"crypto/tls"
+	"strings"
 )
 
-func SendByTLS(fromEmail string, toEmail string, subject string, body string, username string, password string, servername string) error {
+func SendByTLS(fromEmail string, toEmails []string, subject string, body string, username string, password string, servername string) error {
 	from := mail.Address{"", fromEmail}
-	to   := mail.Address{"", toEmail}
 
 	headers := map[string]string{}
 	headers["From"] = from.String()
-	headers["To"] = to.String()
+	headers["To"] = strings.Join(toEmails, ",")
 	headers["Subject"] = subject
 
 	message := ""
@@ -40,7 +40,9 @@ func SendByTLS(fromEmail string, toEmail string, subject string, body string, us
 
 	if err = c.Mail(from.Address); err != nil { return err }
 
-	if err = c.Rcpt(to.Address); err != nil { return err }
+	for _, email := range toEmails {
+		err = c.Rcpt(email); if err != nil { return err }
+	}
 
 	w, err := c.Data(); if err != nil { return err }
 
