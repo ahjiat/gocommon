@@ -28,11 +28,11 @@ func Delete(key string) {
 	localCache.Delete(key)
 }
 
-func Load[T any](f func() T, expire time.Duration, suffix interface{}) T {
+func Load[T any](f func() (T,bool), expire time.Duration, suffix interface{}) T {
 	methodName := method.AppendName(suffix, 3)
 	value, found := Get[T](methodName); if found { return value }
-	value = f()
-	Set(methodName, value, expire)
+	value, isSave := f()
+	if isSave { Set(methodName, value, expire) }
 	return value
 }
 
