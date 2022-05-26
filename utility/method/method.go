@@ -35,6 +35,8 @@ func AppendName(v interface{}, skip ...int) string {
 			name = strconv.Itoa(v.(int))
 		case string:
 			name = v.(string)
+		case nil:
+			name = ""
 		default:
 			panic(fmt.Sprintf("%v access param int/string", Name()))
 	}
