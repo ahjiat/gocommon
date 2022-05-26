@@ -12,6 +12,10 @@ var mutexCtrls = map[string]*sync.Mutex{}
 
 var localCache *cache.Cache
 
+const (
+	NoExpiration time.Duration = cache.NoExpiration
+)
+
 func init() {
 	localCache = cache.New(cache.NoExpiration, 5 * time.Minute)
 }
