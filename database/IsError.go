@@ -9,19 +9,19 @@ const (
 	ErrDuplicated = 1062
 )
 
-func IsError(f func(), errNum int) bool {
+func IsError(f func()) (int, error) {
 	var rtnVal int
-	errorHandle(f, &rtnVal)
-	if errNum != rtnVal { return false }
-	return true
+	rtnErr := new(error)
+	errorHandle(f, &rtnVal, rtnErr)
+	return rtnVal, *rtnErr
 }
 
-func errorHandle(f func(), rtnVal *int) bool {
+func errorHandle(f func(), rtnVal *int, rtnErr *error) bool {
 	defer func() {
 		if errmsg := recover(); errmsg != nil {
-			err := errmsg.(error)
+			*rtnErr = errmsg.(error)
 			var mysqlErr *mysql.MySQLError
-			if errors.As(err, &mysqlErr) {
+			if errors.As(*rtnErr, &mysqlErr) {
 				*rtnVal = int(mysqlErr.Number)
 			}
 		}
