@@ -79,5 +79,6 @@ func GetBase64SecureImg(expire time.Duration) (string, string) {
 func Verify(uuid string, digits string) bool {
 	value, found := Get[string](uuid); if ! found { return false }
 	if value != digits { return false }
+	Delete(uuid)
 	return true
 }
