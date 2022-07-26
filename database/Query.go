@@ -11,3 +11,11 @@ func Query[T any](db *gorm.DB, sql string, values ...interface{}) *T {
 	if result.RowsAffected == 0 { return nil }
 	return data
 }
+
+func QueryToSql[T any](db *gorm.DB, sql string, values ...interface{}) string {
+	result := db.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		data := new(T)
+		return tx.Raw(sql, values...).Scan(data);
+	})
+	return result
+}
