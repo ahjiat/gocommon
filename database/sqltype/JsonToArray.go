@@ -27,9 +27,13 @@ func (self *JsonToArray[T]) Scan(value interface{}) error {
 	return nil
 }
 
-func (self *JsonToArray[T]) Value() (driver.Value, error) {
-	fmt.Printf("--------- Value ------------")
-	return *self, nil
+func (self JsonToArray[T]) Value() (driver.Value, error) {
+	// for create/update
+	if len(self) == 0 { return []byte("[]"), nil }
+	b, err := json.Marshal(self); if err != nil {
+		panic(err)
+	}
+	return b, nil
 }
 
 // must tell gorm its type is text or unsupport data type will raise
