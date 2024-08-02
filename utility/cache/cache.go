@@ -9,6 +9,7 @@ import (
 )
 
 var mutexCtrls = map[string]*sync.Mutex{}
+var mutexCtrlsMux sync.Mutex
 
 var localCache *cache.Cache
 
@@ -52,13 +53,17 @@ func LoadSync[T any](f func() (T,bool), expire time.Duration, suffix interface{}
 	*/
 	var mux *sync.Mutex
 	mux, found = mutexCtrls[methodName]; if ! found {
+		mutexCtrlsMux.Lock()
 		mux = &sync.Mutex{}
 		mutexCtrls[methodName] = mux
+		mutexCtrlsMux.Unlock()
 	}
 	mux.Lock()
 	defer func() {
-		mux.Unlock()
+		mutexCtrlsMux.Lock()
 		delete(mutexCtrls, methodName)
+		mutexCtrlsMux.Unlock()
+		mux.Unlock()
 	}()
 
 	value, found = Get[T](methodName); if found { return value }
