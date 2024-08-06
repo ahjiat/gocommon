@@ -4,6 +4,8 @@ import (
 	"sync"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/google/uuid"
+	"time"
+	"fmt"
 )
 
 func New() Scheduler {
@@ -70,11 +72,55 @@ func (self *Scheduler) Add(name string, cron string, f any, args ...any) {
 	self.Jobs[job.ID().String()] = myjob
 }
 
+func (self *Scheduler) AddWithDuration(name string, duration time.Duration, f any, args ...any) {
+	// create a scheduler
+	var err error
+	if self.schedule == nil {
+		self.schedule, err = gocron.NewScheduler(); if err != nil {
+			panic(err)
+		}
+	}
+
+	// add a job to the scheduler
+	_, err = self.schedule.NewJob(
+		gocron.OneTimeJob(gocron.OneTimeJobStartDateTime(time.Now().Add(duration))),
+		gocron.NewTask(f, args...),
+		gocron.WithName(name),
+		gocron.WithTags(name),
+		gocron.WithEventListeners(
+			gocron.AfterJobRuns(
+				func(jobID uuid.UUID, jobName string) {
+					self.schedule.RemoveJob(jobID)
+				},
+			),
+			gocron.AfterJobRunsWithError(
+				func(jobID uuid.UUID, jobName string, err error) {
+					self.schedule.RemoveJob(jobID)
+				},
+			),
+			gocron.BeforeJobRuns(
+				func(jobID uuid.UUID, jobName string) {
+				},
+			),
+		),
+	); if err != nil { panic(err) }
+}
+
+func (self *Scheduler) RemoveByTags(tags ...string) {
+	self.schedule.RemoveByTags(tags...)
+}
+
 func (self *Scheduler) Start() {
 	if self.schedule == nil {
 		panic("No Scheduler Jobs")
 	}
 	self.schedule.Start()
+}
+
+func (self *Scheduler) Monitor() {
+	for _, j := range self.schedule.Jobs() {
+		fmt.Printf("ID:%v, Name:%v, Tags:%v\n", j.ID(), j.Name(), j.Tags())
+	}
 }
 
 
