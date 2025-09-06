@@ -104,7 +104,7 @@ func (self tbl[T]) Row() *T {
 func (self tbl[T]) Rows() *[]T {
 	data := new([]T)
 	if self.chainDB == nil { self.chainDB = self.DB.Model(data) }
-	result := self.chainDB.Scan(data);
+	result := self.chainDB.Find(data);
 	if result.Error != nil { panic(result.Error) }
 	if result.RowsAffected == 0 { return nil }
 	return data
