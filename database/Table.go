@@ -48,7 +48,7 @@ func (self tbl[T]) OrderBy(values ...string) *tbl[T] {
 func (self tbl[T]) ToSql() string {
 	if self.chainDB == nil { self.chainDB = self.DB.Model(new(T)) }
 	sql := self.chainDB.ToSQL(func(tx *gorm.DB) *gorm.DB {
-		return tx.Scan(new(T))
+		return tx.Find(new(T))
 	})
 	return sql
 }
