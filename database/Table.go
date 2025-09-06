@@ -4,6 +4,7 @@ import (
 	"gorm.io/gorm"
 	"reflect"
 	"fmt"
+	"common/database/sqlfunc"
 )
 
 type tblInterface interface {
@@ -108,6 +109,10 @@ func (self tbl[T]) Rows() *[]T {
 	if result.Error != nil { panic(result.Error) }
 	if result.RowsAffected == 0 { return nil }
 	return data
+}
+
+func (self tbl[T]) Execute() sqlfunc.Extend[T] {
+	return sqlfunc.Extend[T]{Records: self.Rows()}
 }
 
 func (self tbl[T]) Value() T {
