@@ -108,6 +108,23 @@ func (self tbl[T]) Rows() *[]T {
 	return data
 }
 
+func (self tbl[T]) Value() T {
+	data := new(T)
+	if self.chainDB == nil { self.chainDB = self.DB.Model(data) }
+	result := self.chainDB.Scan(data);
+	if result.Error != nil { panic(result.Error) }
+	return *data
+}
+
+func (self tbl[T]) ValueOrDefault(def T) T {
+	data := new(T)
+	if self.chainDB == nil { self.chainDB = self.DB.Model(data) }
+	result := self.chainDB.Scan(data);
+	if result.Error != nil { panic(result.Error) }
+	if result.RowsAffected == 0 { *data = def }
+	return *data
+}
+
 func (self tbl[T]) Save(data *T) *T {
 	result := self.DB.Model(data).Save(data);
 	if result.Error != nil { panic(result.Error) }
