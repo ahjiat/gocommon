@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"fmt"
 	"common/database/sqlfunc"
+	"common/utility/pool"
 )
 
 type tblInterface interface {
@@ -18,6 +19,7 @@ func Table[T tblInterface](db *gorm.DB) *tbl[T] {
 type tbl[T tblInterface] struct {
 	DB *gorm.DB
 	chainDB *gorm.DB
+	conncurrency int
 }
 
 func (self tbl[T]) Select(query interface{}, args ...interface{}) *tbl[T] {
@@ -43,6 +45,12 @@ func (self tbl[T]) OrderBy(values ...string) *tbl[T] {
 	for _, value := range values {
 		self.chainDB = self.chainDB.Order(value)
 	}
+	return &self
+}
+
+func (self tbl[T]) Parallel(conncurrency int) *tbl[T] {
+	if self.chainDB == nil { self.chainDB = self.DB.Model(new(T)) }
+	self.conncurrency = conncurrency
 	return &self
 }
 
@@ -147,7 +155,7 @@ func (self tbl[T]) Add(data *T) *T {
 // ForEach iterates rows in batches and invokes a user callback via reflection.
 // The callback must be a function whose first parameter is either T or *T.
 // Any remaining parameters must be compatible with the supplied args.
-func (self tbl[T]) ForEach(cb any, args ...any) int64 {
+func (self tbl[T]) ForEach(cb any, args ...any) {
 	if self.chainDB == nil { self.chainDB = self.DB.Model(new(T)) }
 
 	fnVal := reflect.ValueOf(cb)
@@ -210,29 +218,47 @@ func (self tbl[T]) ForEach(cb any, args ...any) int64 {
 	const batchSize = 1000
 	var (
 		batch []T
-		total int64
 	)
 
 	res := self.chainDB.FindInBatches(&batch, batchSize, func(tx *gorm.DB, _ int) error {
-		for i := range batch {
-			var first reflect.Value
-			if wantPtr {
-				first = reflect.ValueOf(&batch[i])
-			} else {
-				first = reflect.ValueOf(batch[i])
+		if self.conncurrency > 1 {
+			p := pool.New(self.conncurrency)
+			for i := range batch {
+				p.Go(func(i int){
+					var first reflect.Value
+					if wantPtr {
+						first = reflect.ValueOf(&batch[i])
+					} else {
+						first = reflect.ValueOf(batch[i])
+					}
+
+					callArgs := make([]reflect.Value, 1+len(coercedArgs))
+					callArgs[0] = first
+					copy(callArgs[1:], coercedArgs)
+
+					fnVal.Call(callArgs)
+				}, i)
 			}
+			p.Wait()
+		} else {
+			for i := range batch {
+				var first reflect.Value
+				if wantPtr {
+					first = reflect.ValueOf(&batch[i])
+				} else {
+					first = reflect.ValueOf(batch[i])
+				}
 
-			callArgs := make([]reflect.Value, 1+len(coercedArgs))
-			callArgs[0] = first
-			copy(callArgs[1:], coercedArgs)
+				callArgs := make([]reflect.Value, 1+len(coercedArgs))
+				callArgs[0] = first
+				copy(callArgs[1:], coercedArgs)
 
-			fnVal.Call(callArgs)
-			total++
+				fnVal.Call(callArgs)
+			}
 		}
 		return nil
 	})
 	if res.Error != nil { panic(res.Error) }
-	return total
 }
 
 
