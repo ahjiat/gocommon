@@ -7,12 +7,16 @@ import (
 )
 
 type Extend[T any] struct {
-	Records      *[]T     // ← pointer to slice of T
+	records      *[]T     // ← pointer to slice of T
 	conncurrency int
 }
 
+func New[T any](records *[]T) *Extend[T] {
+	return &Extend[T]{records: records}
+}
+
 func (b Extend[T]) IsEmpty() bool {
-	return b.Records == nil || len(*b.Records) == 0
+	return b.records == nil || len(*b.records) == 0
 }
 
 func (b Extend[T]) Parallel(conncurrency int) *Extend[T] {
@@ -22,26 +26,26 @@ func (b Extend[T]) Parallel(conncurrency int) *Extend[T] {
 
 func (b Extend[T]) First() T {
     var zero T
-    if b.Records == nil || len(*b.Records) == 0 {
+    if b.records == nil || len(*b.records) == 0 {
         return zero
     }
-    return (*b.Records)[0]
+    return (*b.records)[0]
 }
 
 func (b Extend[T]) Row() *T {
-	if b.Records == nil || len(*b.Records) == 0 { return nil }
-	return &(*b.Records)[0]
+	if b.records == nil || len(*b.records) == 0 { return nil }
+	return &(*b.records)[0]
 }
 
 func (b Extend[T]) Rows() *[]T {
-	return b.Records
+	return b.records
 }
 
-// ForEach calls fn(element, args...) for each element of b.Records.
+// ForEach calls fn(element, args...) for each element of b.records.
 // fn must be a function whose first parameter is compatible with T (or *T),
 // followed by parameters matching the types of args...
 func (b Extend[T]) ForEach(fn any, args ...any) {
-	if b.Records == nil || len(*b.Records) == 0 {
+	if b.records == nil || len(*b.records) == 0 {
 		return
 	}
 
@@ -100,16 +104,16 @@ func (b Extend[T]) ForEach(fn any, args ...any) {
 	// Iterate and call (optionally in parallel)
 	if b.conncurrency > 1 {
 		p := pool.New(b.conncurrency)
-		for i := range *b.Records {
+		for i := range *b.records {
 			p.Go(func(i int) {
-				elem := reflect.ValueOf((*b.Records)[i])
+				elem := reflect.ValueOf((*b.records)[i])
 				callOne(elem)
 			}, i)
 		}
 		p.Wait()
 	} else {
-		for i := range *b.Records {
-			elem := reflect.ValueOf((*b.Records)[i])
+		for i := range *b.records {
+			elem := reflect.ValueOf((*b.records)[i])
 			callOne(elem)
 		}
 	}

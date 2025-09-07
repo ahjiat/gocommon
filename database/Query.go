@@ -26,7 +26,7 @@ func Execute[T any](db *gorm.DB, sql string, values ...interface{}) sqlfunc.Exte
 	result := db.Raw(sql, values...).Scan(data)
 	if result.Error != nil { panic(result.Error) }
 	if result.RowsAffected == 0 || len(*data) == 0 {
-		return sqlfunc.Extend[T]{Records: nil}
+		return *sqlfunc.New[T](nil)
 	}
-	return sqlfunc.Extend[T]{Records: data}
+	return *sqlfunc.New[T](data)
 }
