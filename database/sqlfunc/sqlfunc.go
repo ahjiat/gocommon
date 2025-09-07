@@ -19,9 +19,9 @@ func (b Extend[T]) IsEmpty() bool {
 	return b.records == nil || len(*b.records) == 0
 }
 
-func (b *Extend[T]) Parallel(conncurrency int) *Extend[T] {
+func (b Extend[T]) Parallel(conncurrency int) *Extend[T] {
 	b.conncurrency = conncurrency
-	return b
+	return &b
 }
 
 func (b Extend[T]) First() T {
