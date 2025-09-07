@@ -21,10 +21,12 @@ func QueryToSql[T any](db *gorm.DB, sql string, values ...interface{}) string {
 	return result
 }
 
-func Fetch[T any](db *gorm.DB, sql string, values ...interface{}) sqlfunc.Extend[[]T] {
-    data := new([]T) // *([]T)
-    result := db.Raw(sql, values...).Scan(data)
-    if result.Error != nil { panic(result.Error) }
-    if result.RowsAffected == 0 { return sqlfunc.Extend[[]T]{Records: nil} }
-    return sqlfunc.Extend[[]T]{Records: data}
+func Fetch[T any](db *gorm.DB, sql string, values ...interface{}) sqlfunc.Extend[T] {
+	data := new([]T) // *[]T
+	result := db.Raw(sql, values...).Scan(data)
+	if result.Error != nil { panic(result.Error) }
+	if result.RowsAffected == 0 || len(*data) == 0 {
+		return sqlfunc.Extend[T]{Records: nil}
+	}
+	return sqlfunc.Extend[T]{Records: data}
 }
