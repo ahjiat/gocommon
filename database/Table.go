@@ -119,8 +119,21 @@ func (self tbl[T]) Rows() *[]T {
 	return data
 }
 
-func (self tbl[T]) Execute() sqlfunc.Extend[T] {
-	return sqlfunc.Extend[T]{Records: self.Rows()}
+func (self tbl[T]) Execute() sqlfunc.Extend[[]T] {
+    rs := self.Rows() // *([]T)
+    // If you want IsEmpty() to be true on no rows, return nil when empty:
+    if rs == nil || len(*rs) == 0 {
+        return sqlfunc.Extend[[]T]{Records: nil}
+    }
+    return sqlfunc.Extend[[]T]{Records: rs}
+}
+
+func (self tbl[T]) ExecuteOne() sqlfunc.Extend[T] {
+    row := self.Row() // *T
+    if row == nil {
+        return sqlfunc.Extend[T]{Records: nil}
+    }
+    return sqlfunc.Extend[T]{Records: row}
 }
 
 func (self tbl[T]) Value() T {
