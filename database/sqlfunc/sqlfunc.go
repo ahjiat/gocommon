@@ -20,8 +20,6 @@ func (b Extend[T]) Parallel(conncurrency int) *Extend[T] {
 	return &b
 }
 
-// First returns the first element (value, not pointer).
-// If empty, returns zero T and false.
 func (b Extend[T]) First() T {
     var zero T
     if b.Records == nil || len(*b.Records) == 0 {
@@ -30,6 +28,14 @@ func (b Extend[T]) First() T {
     return (*b.Records)[0]
 }
 
+func (b Extend[T]) Row() *T {
+	if b.Records == nil || len(*b.Records) == 0 { return nil }
+	return &(*b.Records)[0]
+}
+
+func (b Extend[T]) Rows() *[]T {
+	return b.Records
+}
 
 // ForEach calls fn(element, args...) for each element of b.Records.
 // fn must be a function whose first parameter is compatible with T (or *T),
