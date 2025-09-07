@@ -21,7 +21,7 @@ func QueryToSql[T any](db *gorm.DB, sql string, values ...interface{}) string {
 	return result
 }
 
-func Fetch[T any](db *gorm.DB, sql string, values ...interface{}) sqlfunc.Extend[T] {
+func Execute[T any](db *gorm.DB, sql string, values ...interface{}) sqlfunc.Extend[T] {
 	data := new([]T) // *[]T
 	result := db.Raw(sql, values...).Scan(data)
 	if result.Error != nil { panic(result.Error) }
