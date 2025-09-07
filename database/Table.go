@@ -127,7 +127,7 @@ func (self tbl[T]) Execute() sqlfunc.Extend[T] {
     return sqlfunc.Extend[T]{Records: rs}
 }
 
-func (self tbl[T]) Value() T {
+func (self tbl[T]) First() T {
 	data := new(T)
 	if self.chainDB == nil { self.chainDB = self.DB.Model(data) }
 	result := self.chainDB.Take(data);
@@ -135,11 +135,15 @@ func (self tbl[T]) Value() T {
 	return *data
 }
 
-func (self tbl[T]) ValueOrDefault(def T) T {
+func (self tbl[T]) FirstOrDefault(def T) T {
 	data := new(T)
 	if self.chainDB == nil { self.chainDB = self.DB.Model(data) }
 	result := self.chainDB.Take(data);
-	if result.Error != nil && result.Error != gorm.ErrRecordNotFound { panic(result.Error) }
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			*data = def
+		} else { panic(result.Error) }
+	}
 	return *data
 }
 
