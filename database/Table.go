@@ -105,8 +105,8 @@ func (self tbl[T]) Row() *T {
 	data := new(T)
 	if self.chainDB == nil { self.chainDB = self.DB.Model(data) }
 	result := self.chainDB.Take(data);
-	if result.Error != nil { panic(result.Error) }
-	if result.RowsAffected == 0 { return nil }
+	if result.Error == gorm.ErrRecordNotFound { return nil
+	} else if result.Error != nil { panic(result.Error) }
 	return data
 }
 
@@ -131,7 +131,7 @@ func (self tbl[T]) Value() T {
 	data := new(T)
 	if self.chainDB == nil { self.chainDB = self.DB.Model(data) }
 	result := self.chainDB.Take(data);
-	if result.Error != nil { panic(result.Error) }
+	if result.Error != nil && result.Error != gorm.ErrRecordNotFound { panic(result.Error) }
 	return *data
 }
 
@@ -139,8 +139,7 @@ func (self tbl[T]) ValueOrDefault(def T) T {
 	data := new(T)
 	if self.chainDB == nil { self.chainDB = self.DB.Model(data) }
 	result := self.chainDB.Take(data);
-	if result.Error != nil { panic(result.Error) }
-	if result.RowsAffected == 0 { *data = def }
+	if result.Error != nil && result.Error != gorm.ErrRecordNotFound { panic(result.Error) }
 	return *data
 }
 
