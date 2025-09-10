@@ -32,13 +32,12 @@ func (b Extend[T]) First() T {
     return (*b.records)[0]
 }
 
-func (b Extend[T]) Row() *T {
-	if b.records == nil || len(*b.records) == 0 { return nil }
-	return &(*b.records)[0]
+func (b Extend[T]) Row() T {
+	return (*b.records)[0]
 }
 
-func (b Extend[T]) Rows() *[]T {
-	return b.records
+func (b Extend[T]) Rows() []T {
+	return *b.records
 }
 
 // ForEach calls fn(element, args...) for each element of b.records.
