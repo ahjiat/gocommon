@@ -40,9 +40,6 @@ func (b Extend[T]) Rows() []T {
 	return *b.records
 }
 
-// ForEach calls fn(element, args...) for each element of b.records.
-// fn must be a function whose first parameter is compatible with T (or *T),
-// followed by parameters matching the types of args...
 func (b Extend[T]) ForEach(fn any, args ...any) {
 	if b.records == nil || len(*b.records) == 0 {
 		return
@@ -79,16 +76,26 @@ func (b Extend[T]) ForEach(fn any, args ...any) {
 		fixedArgs[i] = av
 	}
 
+	// Take an addressable view of the slice elements.
+	sliceV := reflect.ValueOf(b.records).Elem() // *[]T -> []T (addressable)
+	if sliceV.Kind() != reflect.Slice {
+		panic("records must be a slice pointer")
+	}
+
 	callOne := func(elem reflect.Value) {
 		firstParam := ft.In(0)
 
 		var firstArg reflect.Value
 		switch {
-		case elem.Type().AssignableTo(firstParam):
+		case elem.Type().AssignableTo(firstParam): // T -> T or *T -> *T
 			firstArg = elem
-		case elem.CanAddr() && elem.Addr().Type().AssignableTo(firstParam):
-			firstArg = elem.Addr() // supports callbacks wanting *T
-		case elem.Type().ConvertibleTo(firstParam):
+		case elem.Kind() == reflect.Ptr && elem.Elem().Type().AssignableTo(firstParam): // *T -> T
+			firstArg = elem.Elem()
+		case elem.CanAddr() && elem.Addr().Type().AssignableTo(firstParam): // T -> *T
+			firstArg = elem.Addr()
+		case elem.Kind() == reflect.Ptr && elem.Elem().Type().ConvertibleTo(firstParam): // *T -> T' (convert underlying)
+			firstArg = elem.Elem().Convert(firstParam)
+		case elem.Type().ConvertibleTo(firstParam): // T -> T' (convert value)
 			firstArg = elem.Convert(firstParam)
 		default:
 			panic(fmt.Sprintf("element %v not assignable to first param %v", elem.Type(), firstParam))
@@ -103,16 +110,16 @@ func (b Extend[T]) ForEach(fn any, args ...any) {
 	// Iterate and call (optionally in parallel)
 	if b.conncurrency > 1 {
 		p := pool.New(b.conncurrency)
-		for i := range *b.records {
+		for i := 0; i < sliceV.Len(); i++ {
 			p.Go(func(i int) {
-				elem := reflect.ValueOf((*b.records)[i])
+				elem := sliceV.Index(i) // addressable element T
 				callOne(elem)
 			}, i)
 		}
 		p.Wait()
 	} else {
-		for i := range *b.records {
-			elem := reflect.ValueOf((*b.records)[i])
+		for i := 0; i < sliceV.Len(); i++ {
+			elem := sliceV.Index(i) // addressable element T
 			callOne(elem)
 		}
 	}
