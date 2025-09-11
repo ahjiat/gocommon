@@ -32,11 +32,7 @@ func (b Extend[T]) First() T {
 	return b.records[0]
 }
 
-func (b Extend[T]) Row() T {
-	return b.First()
-}
-
-func (b Extend[T]) Rows() []T {
+func (b Extend[T]) All() []T {
 	return b.records
 }
 
