@@ -122,9 +122,9 @@ func (self tbl[T]) Rows() *[]T {
 func (self tbl[T]) Execute() *sqlfunc.Extend[T] {
     rs := self.Rows() // *([]T)
     if rs == nil || len(*rs) == 0 {
-        return sqlfunc.New[T](nil)
+        return sqlfunc.New[T](*new([]T))
     }
-    return sqlfunc.New[T](rs)
+    return sqlfunc.New[T](*rs)
 }
 
 func (self tbl[T]) First() T {

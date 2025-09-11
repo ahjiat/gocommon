@@ -7,16 +7,16 @@ import (
 )
 
 type Extend[T any] struct {
-	records      *[]T     // ← pointer to slice of T
+	records      []T
 	conncurrency int
 }
 
-func New[T any](records *[]T) *Extend[T] {
+func New[T any](records []T) *Extend[T] {
 	return &Extend[T]{records: records}
 }
 
 func (b Extend[T]) IsEmpty() bool {
-	return b.records == nil || len(*b.records) == 0
+	return len(b.records) == 0
 }
 
 func (b Extend[T]) Parallel(conncurrency int) *Extend[T] {
@@ -25,23 +25,23 @@ func (b Extend[T]) Parallel(conncurrency int) *Extend[T] {
 }
 
 func (b Extend[T]) First() T {
-    var zero T
-    if b.records == nil || len(*b.records) == 0 {
-        return zero
-    }
-    return (*b.records)[0]
+	var zero T
+	if len(b.records) == 0 {
+		return zero
+	}
+	return b.records[0]
 }
 
 func (b Extend[T]) Row() T {
-	return (*b.records)[0]
+	return b.First()
 }
 
 func (b Extend[T]) Rows() []T {
-	return *b.records
+	return b.records
 }
 
 func (b Extend[T]) ForEach(fn any, args ...any) {
-	if b.records == nil || len(*b.records) == 0 {
+	if len(b.records) == 0 {
 		return
 	}
 
@@ -51,15 +51,15 @@ func (b Extend[T]) ForEach(fn any, args ...any) {
 	}
 	ft := v.Type()
 
-	// fn must accept T (+ len(args) extras)
+	// fn must accept T or *T (+ len(args) extras)
 	if ft.NumIn() != 1+len(args) {
-		panic(fmt.Sprintf("function must take %d params (T + %d extra)", 1+len(args), len(args)))
+		panic(fmt.Sprintf("function must take %d params (T or *T + %d extra)", 1+len(args), len(args)))
 	}
 
 	// Pre-convert fixed args to the function's parameter types.
 	fixedArgs := make([]reflect.Value, len(args))
 	for i, a := range args {
-		want := ft.In(i + 1) // skip first param (T)
+		want := ft.In(i + 1) // skip first param (T or *T)
 		var av reflect.Value
 		if a == nil {
 			av = reflect.Zero(want)
@@ -76,10 +76,13 @@ func (b Extend[T]) ForEach(fn any, args ...any) {
 		fixedArgs[i] = av
 	}
 
-	// Take an addressable view of the slice elements.
-	sliceV := reflect.ValueOf(b.records).Elem() // *[]T -> []T (addressable)
+	// Take an addressable view of the slice so elements are addressable (for *T).
+	// Using &b.records here is fine even though b is a value receiver: the slice header
+	// is copied, but it still points to the same backing array, so element updates
+	// (when using *T) will modify the underlying data as expected.
+	sliceV := reflect.ValueOf(&b.records).Elem() // []T (addressable)
 	if sliceV.Kind() != reflect.Slice {
-		panic("records must be a slice pointer")
+		panic("records must be a slice")
 	}
 
 	callOne := func(elem reflect.Value) {
@@ -87,15 +90,15 @@ func (b Extend[T]) ForEach(fn any, args ...any) {
 
 		var firstArg reflect.Value
 		switch {
-		case elem.Type().AssignableTo(firstParam): // T -> T or *T -> *T
+		case elem.Type().AssignableTo(firstParam): // T -> T
 			firstArg = elem
-		case elem.Kind() == reflect.Ptr && elem.Elem().Type().AssignableTo(firstParam): // *T -> T
-			firstArg = elem.Elem()
 		case elem.CanAddr() && elem.Addr().Type().AssignableTo(firstParam): // T -> *T
 			firstArg = elem.Addr()
-		case elem.Kind() == reflect.Ptr && elem.Elem().Type().ConvertibleTo(firstParam): // *T -> T' (convert underlying)
+		case elem.Kind() == reflect.Ptr && elem.Elem().Type().AssignableTo(firstParam): // *T -> T
+			firstArg = elem.Elem()
+		case elem.Kind() == reflect.Ptr && elem.Elem().Type().ConvertibleTo(firstParam): // *T -> T'
 			firstArg = elem.Elem().Convert(firstParam)
-		case elem.Type().ConvertibleTo(firstParam): // T -> T' (convert value)
+		case elem.Type().ConvertibleTo(firstParam): // T -> T'
 			firstArg = elem.Convert(firstParam)
 		default:
 			panic(fmt.Sprintf("element %v not assignable to first param %v", elem.Type(), firstParam))
@@ -112,14 +115,14 @@ func (b Extend[T]) ForEach(fn any, args ...any) {
 		p := pool.New(b.conncurrency)
 		for i := 0; i < sliceV.Len(); i++ {
 			p.Go(func(i int) {
-				elem := sliceV.Index(i) // addressable element T
+				elem := sliceV.Index(i)
 				callOne(elem)
 			}, i)
 		}
 		p.Wait()
 	} else {
 		for i := 0; i < sliceV.Len(); i++ {
-			elem := sliceV.Index(i) // addressable element T
+			elem := sliceV.Index(i)
 			callOne(elem)
 		}
 	}
