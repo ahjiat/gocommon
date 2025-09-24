@@ -36,6 +36,10 @@ func (b Extend[T]) All() []T {
 	return b.records
 }
 
+func (b Extend[T]) Count() int {
+	return len(b.records)
+}
+
 func (b Extend[T]) ForEach(fn any, args ...any) {
 	if len(b.records) == 0 {
 		return
