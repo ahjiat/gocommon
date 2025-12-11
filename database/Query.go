@@ -27,3 +27,11 @@ func Execute[T any](db *gorm.DB, sql string, values ...interface{}) *sqlfunc.Ext
 	if result.Error != nil { panic(result.Error) }
 	return sqlfunc.New[T](*data)
 }
+
+func ExecuteToSql[T any](db *gorm.DB, sql string, values ...interface{}) string {
+	result := db.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		data := new(T)
+		return tx.Raw(sql, values...).Scan(data);
+	})
+	return result
+}
